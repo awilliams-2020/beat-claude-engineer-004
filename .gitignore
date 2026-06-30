@@ -1,6 +1,3 @@
-# Personal prep notes, not part of the submission
-PREP.md
-
 # Python build artifacts
 .venv/
 __pycache__/
