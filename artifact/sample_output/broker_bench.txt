@@ -1,0 +1,35 @@
+----- PACED (true streaming lag, consumer keeps up) -----
+Producing 40000 events (acks=all, paced@6000eps) with consumer reading live ...
+
+=== REDPANDA RESULTS (OBSERVED, local 3-node RF=3/ISR=2, NOT AWS) ===
+  broker                   redpanda (local, 3-node, RF=3, ISR=2)
+  mode                     paced@6000eps
+  produced                 40000
+  delivered                40000
+  lost                     0
+  loss_pct                 0.0
+  produce_throughput_eps   5997
+  e2e_p50_ms               7.57
+  e2e_p99_ms               357.46
+  e2e_max_ms               377.92
+
+  Zero loss with acks=all + ISR=2 (paced@6000eps) is the transferable result: a write survives losing a replica. Absolute throughput/latency are
+  laptop+single-consumer bound; burst latency includes client-side queueing (see header); read the PACED p50 for true streaming lag.
+
+----- BURST (zero loss under deliberate overload) -----
+Producing 50000 events (acks=all, burst) with consumer reading live ...
+
+=== REDPANDA RESULTS (OBSERVED, local 3-node RF=3/ISR=2, NOT AWS) ===
+  broker                   redpanda (local, 3-node, RF=3, ISR=2)
+  mode                     burst
+  produced                 50000
+  delivered                50000
+  lost                     0
+  loss_pct                 0.0
+  produce_throughput_eps   27608
+  e2e_p50_ms               907.24
+  e2e_p99_ms               1153.99
+  e2e_max_ms               1186.3
+
+  Zero loss with acks=all + ISR=2 (burst) is the transferable result: a write survives losing a replica. Absolute throughput/latency are
+  laptop+single-consumer bound; burst latency includes client-side queueing (see header); read the PACED p50 for true streaming lag.

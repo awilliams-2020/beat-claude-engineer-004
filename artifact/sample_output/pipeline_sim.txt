@@ -1,0 +1,15 @@
+Running naive pipeline (current-system model) ...
+Running buffered pipeline (proposed design model) ...
+
+=== RESULTS (OBSERVED, simulated on laptop) ===
+  naive (synchronous write)          loss=67.095%  p50= 1098.07ms  p99=  2078.24ms  max=  2078.68ms  processed=  21717/66000
+  buffered (durable buffer + batch)  loss= 0.000%  p50=   22.24ms  p99=   175.12ms  max=   229.78ms  processed=  65999/65999
+
+Interpretation:
+  - Naive sheds 67.09% of events under the 10x spike (inbound overflow) and tail latency blows up to 2078 ms.
+  - Buffered loses 0.00% (durable buffer absorbs the spike) at p99 175 ms.
+  - Mechanism, not magic: the buffer trades a few ms of batching latency for backpressure instead of data loss.
+  - Two levers on purpose: the durable buffer removes the LOSS (no overflow drop); batching removes the LATENCY tail.
+    They move together because that IS the architecture shift (durable log + batched sink), not two independent knobs being cherry-picked.
+
+LABELS: numbers above are OBSERVED on this machine for a SCALED workload; they model, not measure, AWS MSK+Flink. See DESIGN.md evidence log.

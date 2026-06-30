@@ -1,0 +1,21 @@
+Building synthetic partitioned Parquet lake ...
+
+=== GDPR/CCPA DELETION REQUEST (OBSERVED, real files, synthetic data) ===
+  Lake total rows ................ 60000
+  Partition files (tenant x day) . 350
+  Subject user_id ................ 777 (tenant 27)
+  Subject rows BEFORE ............ 60
+  Files containing subject ....... 7 (spread across day partitions)
+  Neighbor user 778 rows BEFORE .. 60 (control)
+
+  Executing copy-on-write delete (rewriting only affected files) ...
+
+=== AFTER ===
+  Subject rows AFTER ............. 0   (expected 0)
+  Neighbor rows AFTER ............ 60   (expected 60, untouched)
+  Files rewritten ................ 7 of 350 (2.0% of the lake)
+  Untouched files byte-identical . 343/343 (sha256 unchanged: yes)
+  Lake total rows AFTER .......... 59940   (= 60000 - 60)
+
+  RESULT: PASS: subject erased, neighbor intact, untouched files byte-identical, counts reconcile.
+  Production note: same operation via Iceberg/Hudi copy-on-write gives ACID deletes + time-travel audit of the erasure.

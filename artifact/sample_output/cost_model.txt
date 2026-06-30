@@ -1,0 +1,53 @@
+=== AWS MONTHLY COST ESTIMATE: BASELINE MONTH ===
+  Workload: 50,000,000 events/day, ~1.52 TB/month ingest (ASSUMED sizing)
+  Prices: BENCHMARKED us-east-1 2026-06 (VERIFY) | Volumes: ASSUMED | Totals: ESTIMATED
+
+  Managed Flink           $       803   #######
+  Data transfer (export)  $       720   ######
+  Fargate collectors      $       577   #####
+  MSK cluster             $       548   #####
+  ElastiCache             $       451   ####
+  S3 storage              $       276   ##
+  DynamoDB writes         $       190   #
+  MSK ingress             $       152   #
+  MSK egress              $       152   #
+  DynamoDB storage        $       125   #
+  DynamoDB reads          $       114   #
+  MSK partitions          $        66   
+  Firehose                $        44   
+  S3 requests             $        30   
+  MSK storage             $        15   
+
+  TOTAL                   $     4,262 / month
+  BUDGET CEILING          $    50,000 / month (brief constraint)
+  HEADROOM                $    45,738   (+91%)  -> WITHIN BUDGET
+
+  Note: a *sustained* 10x month is the stress case; real spikes are hours, not a month. Run --spike to see the worst case.
+
+  Dominant lines drive overrun risk; watch those first. Sensitivity: total scales ~linearly with BYTES_PER_EVENT and ingest GB.
+
+=== AWS MONTHLY COST ESTIMATE: SUSTAINED 10x SPIKE MONTH ===
+  Workload: 500,000,000 events/day, ~15.20 TB/month ingest (ASSUMED sizing)
+  Prices: BENCHMARKED us-east-1 2026-06 (VERIFY) | Volumes: ASSUMED | Totals: ESTIMATED
+
+  Fargate collectors      $     2,307   #######
+  DynamoDB writes         $     1,900   ######
+  Managed Flink           $     1,606   #####
+  MSK ingress             $     1,520   #####
+  MSK egress              $     1,520   #####
+  Data transfer (export)  $       720   ##
+  MSK cluster             $       548   #
+  ElastiCache             $       451   #
+  Firehose                $       441   #
+  S3 storage              $       276   
+  MSK partitions          $       197   
+  S3 requests             $       152   
+  MSK storage             $       150   
+  DynamoDB storage        $       125   
+  DynamoDB reads          $       114   
+
+  TOTAL                   $    12,026 / month
+  BUDGET CEILING          $    50,000 / month (brief constraint)
+  HEADROOM                $    37,974   (+76%)  -> WITHIN BUDGET
+
+  Dominant lines drive overrun risk; watch those first. Sensitivity: total scales ~linearly with BYTES_PER_EVENT and ingest GB.

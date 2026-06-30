@@ -1,0 +1,4 @@
+.venv/
+_lake/
+__pycache__/
+*.pyc

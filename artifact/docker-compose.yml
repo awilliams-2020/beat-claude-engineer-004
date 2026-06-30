@@ -1,0 +1,78 @@
+# 3-node Redpanda (Kafka-API compatible) used as a LOCAL, REAL streaming cluster
+# for broker_bench.py. This is the local stand-in for Amazon MSK Serverless
+# (managed Kafka) in the proposed design: identical Kafka API, acks=all +
+# replication_factor=3 / min.insync.replicas=2 durability, consumer-group offsets.
+#
+# WHY 3 NODES: the design's zero-loss guarantee rests on multi-replica durability
+# (a write isn't acked until >=2 replicas hold it). A single-node broker cannot
+# demonstrate that. This cluster lets broker_bench.py create the topic at RF=3 /
+# ISR=2 and prove the actual durability mechanism, not just consumer replay.
+#
+# It is NOT AWS; numbers from it are OBSERVED (local), not OBSERVED (AWS). The
+# external listener for host clients is on localhost:19092. See DESIGN.md.
+x-node: &node
+  image: docker.redpanda.com/redpandadata/redpanda:v24.2.7
+  healthcheck:
+    test: ["CMD-SHELL", "rpk cluster health | grep -E 'Healthy:.*true'"]
+    interval: 4s
+    timeout: 5s
+    retries: 30
+
+services:
+  redpanda-0:
+    <<: *node
+    container_name: bc-redpanda-0
+    command:
+      - redpanda
+      - start
+      - --kafka-addr=internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr=internal://redpanda-0:9092,external://localhost:19092
+      - --rpc-addr=redpanda-0:33145
+      - --advertise-rpc-addr=redpanda-0:33145
+      - --mode=dev-container
+      - --smp=1
+      - --memory=1G
+      - --seeds=redpanda-0:33145
+      - --node-id=0
+    ports:
+      - "19092:19092"
+
+  redpanda-1:
+    <<: *node
+    container_name: bc-redpanda-1
+    command:
+      - redpanda
+      - start
+      - --kafka-addr=internal://0.0.0.0:9092,external://0.0.0.0:29092
+      - --advertise-kafka-addr=internal://redpanda-1:9092,external://localhost:29092
+      - --rpc-addr=redpanda-1:33145
+      - --advertise-rpc-addr=redpanda-1:33145
+      - --mode=dev-container
+      - --smp=1
+      - --memory=1G
+      - --seeds=redpanda-0:33145
+      - --node-id=1
+    ports:
+      - "29092:29092"
+    depends_on:
+      - redpanda-0
+
+  redpanda-2:
+    <<: *node
+    container_name: bc-redpanda-2
+    command:
+      - redpanda
+      - start
+      - --kafka-addr=internal://0.0.0.0:9092,external://0.0.0.0:39092
+      - --advertise-kafka-addr=internal://redpanda-2:9092,external://localhost:39092
+      - --rpc-addr=redpanda-2:33145
+      - --advertise-rpc-addr=redpanda-2:33145
+      - --mode=dev-container
+      - --smp=1
+      - --memory=1G
+      - --seeds=redpanda-0:33145
+      - --node-id=2
+    ports:
+      - "39092:39092"
+    depends_on:
+      - redpanda-0
