@@ -4,7 +4,7 @@
 
 **Recommendation:** a durable log (**Amazon MSK Serverless**, managed Kafka) feeds Managed Flink, which writes aggregates to a hot store (DynamoDB/Redis) for dashboards and, in parallel, lands raw and curated data in an S3/Iceberg lake for warehouse export and GDPR deletes. This is greenfield: the team has no streaming layer today (their stack is Python/Node/Postgres/Redis). Two calls drive the design, both defended in §1: the **Kafka API** over Kinesis (open standard, no lock-in, plus the Kafka Connect / Schema Registry ecosystem we'd use anyway, and the contract enforcement matters because we can't push schema changes into the SDK), and **Serverless over provisioned** (the brief's core pain is surviving spikes, and provisioned brokers force me to over-size for peak or rebalance mid-spike, exactly when I can least afford it). Migration is a strangler-fig dual-write with per-tenant cutover and a routing flag for instant rollback. The binding constraints are latency, zero loss, and compliance, not budget; the model lands near $4.3K/mo, well under $50K.
 
-> **Operating artifact:** `artifact/` has four runnable scripts that produce the numbers below (`run_all.sh`; captured output in `sample_output/`). Every number carries a source label (Observed / Estimated / Benchmarked / Assumed).
+> **Operating artifact** — runnable source: **https://github.com/awilliams-2020/beat-claude-engineer-004** (`artifact/run_all.sh` regenerates every number below). Every number is produced by one of four scripts (a spike simulator, a real 3-node Kafka-cluster benchmark, a real Parquet GDPR-delete, and a bottom-up cost model); their captured outputs are also quoted inline in the Evidence Log (§ Required Submission Packet), so results are verifiable from this document alone even without opening the repo. Every number carries a source label (Observed / Estimated / Benchmarked / Assumed).
 
 ---
 
@@ -85,6 +85,27 @@ Tiers per the repo `SCORING.md` (0 none, 1 screenshot, 2 demo artifact, 3 logs/e
 | 4 | The design fits the $50K/mo budget with headroom | `cost_model.py` bottom-up: ~$4.3K baseline / ~$12.0K sustained-10× | 2 (model) |
 | 5 | Both latency paths (dashboard ≤5 s, personalization sub-second) hit target | Component estimate (§2) | 0–1 (estimate, not measured on AWS) |
 | 6 | The migration is reversible | Strangler-fig design plus routing flag (§2); design, not yet executed | 0 |
+
+**Captured artifact output** (excerpts, so the numbers above are readable without re-running):
+
+```
+# pipeline_sim.py  — 10× spike, naive vs buffered (OBSERVED, simulated on laptop)
+  naive (synchronous write)          loss=67.095%  p50=1098.07ms  p99=2078.24ms  processed=21717/66000
+  buffered (durable buffer + batch)  loss= 0.000%  p50=  22.24ms  p99= 175.12ms  processed=65999/65999
+
+# broker_bench.py — real 3-node Redpanda, acks=all, RF=3/ISR=2 (OBSERVED, local, NOT AWS)
+  paced@6000eps  produced=40000  lost=0  loss_pct=0.0  e2e_p50=7.57ms  e2e_p99=357.46ms
+  burst          produced=50000  lost=0  loss_pct=0.0  e2e_p50=907.24ms (incl. client send-queue) e2e_p99=1153.99ms
+
+# gdpr_delete_demo.py — real Parquet lake, single-user erase (OBSERVED, synthetic data)
+  Subject rows BEFORE=60 → AFTER=0   Neighbor rows=60 → 60 (untouched)
+  Files rewritten=7 of 350   Untouched files byte-identical (sha256)=343/343   Lake rows 60000 → 59940
+  RESULT: PASS — subject erased, neighbor intact, untouched files byte-identical, counts reconcile.
+
+# cost_model.py — bottom-up AWS estimate (ESTIMATED from BENCHMARKED us-east-1 2026-06 prices)
+  baseline month      TOTAL=$4,262/mo   (headroom +91% under the $50K ceiling)
+  sustained-10× month TOTAL=$12,026/mo  (headroom +76% under the $50K ceiling)
+```
 
 **Honest gaps:** claims 5–6 are design-level, not benchmarked. Nothing ran on real AWS; the broker numbers come from a local 3-node Kafka-API cluster (proves the replication mechanism, not AWS capacity), labeled as such. I did not load-test 50M/day end to end; I tested the mechanism at a scaled volume.
 
